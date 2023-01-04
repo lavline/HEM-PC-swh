@@ -1,11 +1,16 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <getopt.h>
+#include <time.h>
 #include "HEMBS.h"
 #include "read.h"
 #include "random.h"
 
 using namespace std;
+
+double get_nano_time(struct timespec* a, struct timespec* b) {
+	return (b->tv_sec - a->tv_sec) * 1000000000 + b->tv_nsec - a->tv_nsec;
+}
 
 int main(int argc, char* argv[]) {
 	ACL_rules* acl_rules = new ACL_rules;
@@ -14,6 +19,7 @@ int main(int argc, char* argv[]) {
 	bool enable_log = false;
 	bool enable_update = false;
 	int log_level = 1; // {1,2,3}
+	struct timespec t1, t2;
 
 	if (argc == 1) { fprintf(stderr, "use -h(--help) to print the usage guideline.\n"); return 0; }
 	int opt;
@@ -58,8 +64,6 @@ int main(int argc, char* argv[]) {
 			cout << "\n************************************************************************************************************************************************************\n";
 			cout << "* -r(--ruleset): Input the rule set file. This argument must be specified. (Example: [-r acl1])                                                            *\n";
 			cout << "* -p(--packet):  Input the packet set file. If not set, the program will generate randomly. (Example: [-p acl1_trace])                                     *\n";
-			cout << "* -f(--fields):  Set the pTree and aTree used fields, using \',\' to separation. The last on is the port setting, 0 is source port, 1 is destination port.   *\n";
-			cout << "*                Using 0-3 to express source ip 1-4 byte and 4-7 to express destination ip 1-4 byte. (Example: [-f 4,0,1,1])                               *\n";
 			cout << "* -l(--log):     Enable the log. Have three level 1-3. (Example: [-l 3])                                                                                   *\n";
 			cout << "* -u(--update):  Enable update. (Example: [-u])                                                                                                            *\n";
 			cout << "* -h(--help):    Print the usage guideline.                                                                                                                *\n";
@@ -86,8 +90,8 @@ int main(int argc, char* argv[]) {
 	uint64_t totalRules = 0;
 	uint64_t totalMessages = 0;
 
-	//const string file_path = "output/HEM_AFBS.txt";
-	//string content;
+	const string file_path = "HEM_AFBS.txt";
+	string content;
 
 	//for (int dno = 0; dno < numDataSets; dno++)
 	//{	
@@ -108,7 +112,10 @@ int main(int argc, char* argv[]) {
 
 	uint32_t ruleNo;
 	uint64_t checkNum = 0, and64Num = 0, cmpNum = 0, aggBingo = 0, aggFail = 0;
-	clk = clock();
+	//clk = clock();
+
+	double search_time = 0;
+	clock_gettime(CLOCK_REALTIME, &t1);
 	for (int i = 0; i < messages->size; i++)
 	{
 #if DEBUG
@@ -126,7 +133,10 @@ int main(int argc, char* argv[]) {
 		
 #endif
 	}
-	double avgSearchTimeUs = (double)(clock() - clk) * 1000000.0 / CLOCKS_PER_SEC / messages->size;
+	clock_gettime(CLOCK_REALTIME, &t2);
+	search_time = get_nano_time(&t1, &t2);
+	//double avgSearchTimeUs = (double)(clock() - clk) * 1000000.0 / CLOCKS_PER_SEC / messages->size;
+	double avgSearchTimeUs = search_time / messages->size / 1000.0;
 	totalAvgSearchTimeUs += avgSearchTimeUs;
 	double avgCheckNum = (double)checkNum / messages->size;
 	totalAvgCheckNum += avgCheckNum;
@@ -198,6 +208,7 @@ int main(int argc, char* argv[]) {
 		+ " CMP= " + Utils::Double2String(totalAvgCMPNum / numDataSets) \
 		+ " Bingo= " + Utils::Double2String(totalAvgAggBingoNum / numDataSets)\
 		+ " Fail= " + Utils::Double2String(totalAvgAggFailNum / numDataSets) + "\n";
-	Utils::WriteData2Begin(file_path, content);*/
+	*/
+	Utils::WriteData2Begin(file_path, content);
 	return 0;
 }
